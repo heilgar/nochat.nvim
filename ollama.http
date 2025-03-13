@@ -1,0 +1,5 @@
+### https://github.com/heilgar/nvim-http-client
+
+### Ollama models
+GET http://localhost:11434/api/tags
+

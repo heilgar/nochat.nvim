@@ -19,13 +19,6 @@ M.config = {
             input = ""           -- e.g. "Normal:NoChatInput"
         }
     },
-    api_keys = {
-        anthropic = vim.g.nochat_api_key_anthropic or os.getenv('ANTHROPIC_API_KEY'),
-        openai = vim.g.nochat_api_key_openai or os.getenv('OPENAI_API_KEY'),
-    },
-    ollama = {
-        host = vim.g.nochat_ollama_host or 'http://localhost:11434',
-    },
     providers = {
         anthropic = {
             models = {
@@ -33,6 +26,8 @@ M.config = {
                 'claude-3-sonnet-20240229',
                 'claude-3-haiku-20240307',
             },
+
+            api_key = vim.g.nochat_api_key_anthropic or os.getenv('ANTHROPIC_API_KEY'),
         },
         openai = {
             models = {
@@ -40,11 +35,14 @@ M.config = {
                 'gpt-4',
                 'gpt-3.5-turbo',
             },
+
+            api_key = vim.g.nochat_api_key_openai or os.getenv('OPENAI_API_KEY'),
         },
         ollama = {
             models = {
                 'llama3',
             },
+            host = vim.g.nochat_ollama_host or 'http://localhost:11434',
         },
     },
 }
@@ -61,18 +59,62 @@ local function load_dependencies()
 end
 
 M.setup = function(opts)
-    if opts then
-        M.config = vim.tbl_deep_extend('force', M.config, opts)
-    end
-
     if not load_dependencies() then
         return
     end
 
-    require("nochat.window").setup(M.config)
-    require('nochat.providers')
+    if opts then
+        -- If providers are explicitly specified, only use those
+        if opts.providers and next(opts.providers) ~= nil then
+            -- Replace default providers with only the ones specified
+            M.config.providers = {}
+
+            -- Process each provider
+            for provider_name, provider_config in pairs(opts.providers) do
+                M.config.providers[provider_name] = {}
+
+                if provider_config.models and #provider_config.models > 0 then
+                    M.config.providers[provider_name].models = provider_config.models
+                end
+
+                if provider_config.api_key then
+                    M.config.providers[provider_name].api_key = provider_config.api_key
+                end
+
+                if provider_config.host then
+                    M.config.providers[provider_name].host = provider_config.host
+                end
+            end
+
+            -- Ensure a valid default provider
+            local found_valid_provider = false
+            for provider_name, _ in pairs(M.config.providers) do
+                if not found_valid_provider then
+                    M.config.provider = provider_name
+                    found_valid_provider = true
+                end
+            end
+        end
+
+        -- Merge with default config
+        M.config = vim.tbl_deep_extend('force', M.config, opts)
+    end
+
+
+
+
     require('nochat.keymap').setup_keymaps(opts or {})
+    require("nochat.window").setup(M.config)
+
+    local ui = require("nochat.window.ui")
+    ui.setup_highlights()
+
+    local providers = require('nochat.providers')
+    providers.setup(M.config)
+
     require('telescope').load_extension('nochat')
+
+    vim.notify("NoChat initialized successfully", vim.log.levels.INFO)
 end
 
 M.new_chat = function(opts)
@@ -243,27 +285,60 @@ M.get_ai_response = function(session_id)
         return
     end
 
-    -- Set streaming state
+    -- Check if provider is available
+    if not provider:is_available() then
+        local error_message = provider:get_error_message()
+
+        table.insert(session.conversation, {
+            role = "system",
+            content = "Error: " .. error_message
+        })
+
+        M.update_conversation_display(session_id)
+        return
+    end
+
+    if not provider:is_valid_model(model) then
+        local default_model = provider:get_default_model()
+        if default_model then
+            vim.notify("Model '" .. (model or "nil") .. "' is not valid for " .. provider_name ..
+                ". Using default: " .. default_model, vim.log.levels.WARN)
+            session.model = default_model
+            model = default_model
+        else
+            table.insert(session.conversation, {
+                role = "system",
+                content = "Error: No valid model available for " .. provider_name
+            })
+            M.update_conversation_display(session_id)
+            return
+        end
+    end
+
     session.is_streaming = true
 
-    -- Call provider to get response
-    provider.get_response(session.conversation, model, function(response, is_done)
+    local ui = require("nochat.window.ui")
+    local typing_content = ui.format_conversation(
+        session.conversation,
+        session.provider,
+        session.model,
+        session.title,
+        true -- Add typing indicator
+    )
+    require("nochat.window").update_output(session, typing_content)
+
+    provider:get_response(session.conversation, model, function(response, is_done)
         if is_done then
-            -- Add the complete response to the conversation
             table.insert(session.conversation, {
                 role = "assistant",
                 content = response
             })
             session.is_streaming = false
         else
-            -- Handle streaming updates
-            -- Temporarily add or update a streaming message
             local last_msg = session.conversation[#session.conversation]
             if last_msg and last_msg.role == "assistant" and last_msg.streaming then
-                -- Update the streaming message
                 last_msg.content = response
             else
-                -- Add a new streaming message
                 table.insert(session.conversation, {
                     role = "assistant",
                     content = response,
@@ -272,7 +347,6 @@ M.get_ai_response = function(session_id)
             end
         end
 
-        -- Update UI with current state of conversation
         M.update_conversation_display(session_id)
     end)
 end
@@ -316,12 +390,13 @@ M.abort_stream = function(session_id)
     local providers = require('nochat.providers')
     local provider = providers.loaded[provider_name]
 
-    if provider and provider.abort_stream then
-        provider.abort_stream()
+    if provider then
+        provider:abort_stream()
     end
 
     session.is_streaming = false
 
+    -- Remove any streaming messages
     for i = #session.conversation, 1, -1 do
         if session.conversation[i].streaming then
             table.remove(session.conversation, i)
@@ -331,6 +406,7 @@ M.abort_stream = function(session_id)
 
     M.update_conversation_display(session_id)
 end
+
 
 M.clear_conversation = function(session_id)
     session_id = session_id or M.active_session_id
