@@ -50,15 +50,46 @@ M.config = {
 M.active_session_id = nil
 
 local function load_dependencies()
-    local ok, _ = pcall(require, 'telescope')
-    if not ok then
-        vim.notify('Telescope is required for NoChat', vim.log.levels.ERROR)
+    local dependencies_ok = true
+    local missing_deps = {}
+
+    local tok, _ = pcall(require, 'telescope')
+    if not tok then
+        dependencies_ok = false
+        table.insert(missing_deps, "telescope.nvim")
+    end
+
+    local pok, _ = pcall(require, 'plenary')
+    if not pok then
+        dependencies_ok = false
+        table.insert(missing_deps, "plenary.nvim")
+    end
+
+    if not dependencies_ok then
+        vim.notify('NoChat requires the following dependencies: ' .. table.concat(missing_deps, ", "),
+            vim.log.levels.ERROR)
         return false
     end
+
     return true
 end
 
 M.setup = function(opts)
+    M.health = require("nochat.health")
+    -- Register health check
+    local health = vim.health or M.health
+    if health.register then
+        -- Register the health check with the new API
+        health.register("nochat", M.health.check)
+    else
+        -- Fallback for older Neovim versions
+        vim.api.nvim_create_autocmd("VimEnter", {
+            callback = function()
+                M.health.check()
+            end,
+        })
+    end
+
     if not load_dependencies() then
         return
     end
@@ -114,7 +145,43 @@ M.setup = function(opts)
 
     require('telescope').load_extension('nochat')
 
-    vim.notify("NoChat initialized successfully", vim.log.levels.INFO)
+    -- vim.notify("NoChat initialized successfully", vim.log.levels.INFO)
+    --
+    vim.api.nvim_create_user_command('NoChatResize', function(opts)
+        local args = opts.fargs
+        local dimensions = {}
+
+        for _, arg in ipairs(args) do
+            local key, value = arg:match("(.+)=(.+)")
+            if key and value then
+                -- Convert string values to numbers if they look like numbers
+                if value:match("^%d+$") then
+                    value = tonumber(value)
+                elseif value:match("^0%.%d+$") then
+                    value = tonumber(value)
+                end
+
+                dimensions[key] = value
+            end
+        end
+
+        require('nochat').resize_window(dimensions)
+    end, {
+        nargs = '+',
+        desc = 'Resize NoChat window (width=X height=Y input_height=Z)',
+        complete = function(ArgLead, CmdLine, CursorPos)
+            local completions = { 'width=', 'height=', 'input_height=' }
+            local result = {}
+
+            for _, comp in ipairs(completions) do
+                if comp:sub(1, #ArgLead) == ArgLead then
+                    table.insert(result, comp)
+                end
+            end
+
+            return result
+        end
+    })
 end
 
 M.new_chat = function(opts)
@@ -578,6 +645,24 @@ M.delete_session = function(session_id)
 
         vim.notify("Chat session deleted", vim.log.levels.INFO)
     end
+end
+
+M.resize_window = function(dimensions, session_id)
+    session_id = session_id or M.active_session_id
+
+    if not session_id then
+        vim.notify("No active chat session", vim.log.levels.ERROR)
+        return
+    end
+
+    local session = require("nochat.session").get(session_id)
+    if not session then
+        vim.notify("Invalid session ID", vim.log.levels.ERROR)
+        return
+    end
+
+    require("nochat.window").resize(session, dimensions)
+    vim.notify("Resized chat window", vim.log.levels.INFO)
 end
 
 return M

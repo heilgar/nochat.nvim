@@ -1,5 +1,30 @@
 ### https://github.com/heilgar/nvim-http-client
+GET http://localhost:11434/api/version
+Accept: application/json
 
-### Ollama models
+### Ollama tags
 GET http://localhost:11434/api/tags
+Accept: application/json
+
+
+### Generate
+POST http://localhost:11434/api/generate
+Content-Type: application/json
+
+{
+  "model": "deepseek-r1:latest",
+  "prompt": "Create a Node.js API using Fastify to return a list of users",
+  "stream": false
+}
+
+
+### Generate Streaming
+POST http://localhost:11434/api/generate
+Content-Type: application/json
+
+{
+  "model": "llama3",
+  "prompt": "Explain quantum physics in simple terms.",
+  "stream": true
+}
 

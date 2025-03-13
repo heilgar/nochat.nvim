@@ -69,31 +69,6 @@ M.clear = function(buffer)
     end
 end
 
-M.set_placeholder = function(buffer, text)
-    if not buffer or not vim.api.nvim_buf_is_valid(buffer) then
-        return
-    end
-
-    local ns_id = vim.api.nvim_create_namespace("NoChatPlaceholder")
-    vim.api.nvim_buf_clear_namespace(buffer, ns_id, 0, -1)
-
-    local lines = vim.api.nvim_buf_get_lines(buffer, 0, -1, false)
-    if #lines == 1 and lines[1] == "" then
-        vim.api.nvim_buf_set_extmark(buffer, ns_id, 0, 0, {
-            virt_text = { { text, "Comment" } },
-            virt_text_pos = "overlay",
-        })
-    end
-end
-
-M.handle_special_input = function(buffer, action)
-    if action == "abort_stream" then
-        local nochat = require("nochat")
-        if nochat.abort_stream then
-            nochat.abort_stream()
-        end
-    end
-end
 
 return M
 

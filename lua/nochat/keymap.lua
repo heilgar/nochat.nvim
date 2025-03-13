@@ -15,6 +15,7 @@ M.defaults = {
     position_bottom = "<leader>nb",   -- Set window to bottom split
     position_top = "<leader>nt",      -- Set window to top split
     position_tab = "<leader>na",      -- Set window to tab layout
+    resize_window = "<leader>nz",     -- Resize window
 
     -- Multi-window management
     new_chat = "<leader>nn",       -- Create a new chat window
@@ -103,6 +104,31 @@ M.setup_keymaps = function(opts)
     vim.keymap.set('n', keymaps.position_tab or M.defaults.position_tab,
         function() nochat.set_window_position('tab') end,
         { noremap = true, silent = true, desc = "Set NoChat to tab layout" })
+
+    local config = require("nochat.window.config")
+
+    vim.keymap.set('n', keymaps.resize_window or M.defaults.resize_window,
+        function()
+            local session = require("nochat.window").get_current_session()
+            if session and session.window_state.position == "floating" then
+                if session.is_maximized then
+                    -- Restore original size
+                    require("nochat").resize_window({
+                        width = config.get().float_width,
+                        height = config.get().float_height
+                    })
+                    session.is_maximized = false
+                else
+                    -- Maximize
+                    require("nochat").resize_window({
+                        width = 0.95,
+                        height = 0.9
+                    })
+                    session.is_maximized = true
+                end
+            end
+        end,
+        { noremap = true, silent = true, desc = "Toggle NoChat window size" })
 
     -- Multi-window management keymaps
     vim.keymap.set('n', keymaps.new_chat or M.defaults.new_chat,

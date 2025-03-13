@@ -199,24 +199,27 @@ end
 
 M.resize = function(session, dimensions)
     if not session or not session.window_state.is_open then
-        return
+        return false
     end
 
     -- Only floating windows can be resized this way
     if session.window_state.position ~= "floating" then
-        return
+        vim.notify("Only floating windows can be resized with this method", vim.log.levels.WARN)
+        return false
     end
 
-    -- Check if windows are valid
     if not (session.window_state.output_window and vim.api.nvim_win_is_valid(session.window_state.output_window) and
             session.window_state.input_window and vim.api.nvim_win_is_valid(session.window_state.input_window)) then
-        return
+        return false
     end
 
+    -- Get configuration
+    local cfg = config.get()
+
     -- Calculate new dimensions
-    local width = dimensions.width or config.get().width
-    local height = dimensions.height or config.get().height
-    local input_height = dimensions.input_height or config.get().input_height
+    local width = dimensions.width or cfg.float_width or cfg.width
+    local height = dimensions.height or cfg.float_height or cfg.height
+    local input_height = dimensions.input_height or cfg.input_height
 
     -- Convert percentages to absolute sizes
     if type(width) == "number" and width <= 1 then
@@ -226,6 +229,10 @@ M.resize = function(session, dimensions)
     if type(height) == "number" and height <= 1 then
         height = math.floor(vim.o.lines * height)
     end
+
+    -- Ensure minimum sizes
+    width = math.max(width, 20)
+    height = math.max(height, input_height + 5)
 
     -- Calculate positions
     local col = math.floor((vim.o.columns - width) / 2)
@@ -249,6 +256,8 @@ M.resize = function(session, dimensions)
         col = col,
         row = row + output_height + 1,
     })
+
+    return true
 end
 
 M.rename_session = function(session, new_title)

@@ -128,38 +128,6 @@ M.format_conversation = function(conversation, provider, model, title, show_typi
     return lines
 end
 
-
-M.setup_syntax = function(buffer)
-    if not buffer or not vim.api.nvim_buf_is_valid(buffer) then
-        return
-    end
-
-    local syntax_cmds = {
-        -- Headers
-        "syntax match NoChatTitle /^#.*/",
-        "syntax match NoChatUserHeader /^## User$/",
-        "syntax match NoChatAssistantHeader /^## Assistant$/",
-        "syntax match NoChatSystemHeader /^## System$/",
-
-        -- Code blocks
-        "syntax region NoChatCodeBlock start=/```/ end=/```/ keepend",
-
-        -- Separators
-        "syntax match NoChatSeparator /^---$/",
-
-        -- Streaming indicator and emphasis
-        "syntax match NoChatStreaming /\\*(typing\\.\\.\\.)\\*/",
-        "syntax match NoChatEmphasis /\\*[^*]\\+\\*/",
-    }
-
-    -- Apply syntax commands
-    for _, cmd in ipairs(syntax_cmds) do
-        vim.api.nvim_buf_call(buffer, function()
-            vim.cmd(cmd)
-        end)
-    end
-end
-
 M.setup_highlights = function()
     vim.api.nvim_set_hl(0, "NoChatTitle", { link = "Title" })
     vim.api.nvim_set_hl(0, "NoChatUserHeader", { link = "Keyword" })
@@ -174,28 +142,6 @@ M.setup_highlights = function()
     vim.api.nvim_set_hl(0, "NoChatEmphasis", { link = "Special", italic = true })
 
     vim.api.nvim_set_hl(0, "NoChatCodeBlock", { link = "Comment" })
-end
-
-M.create_placeholder = function(provider, model, title)
-    local lines = {}
-
-    -- Add header
-    if title then
-        table.insert(lines, "# " .. title .. " - " .. provider .. " / " .. model)
-    else
-        table.insert(lines, "# NoChat - " .. provider .. " / " .. model)
-    end
-    table.insert(lines, "")
-
-    table.insert(lines, "*Chat started with " .. provider .. " using the " .. model .. " model.*")
-    table.insert(lines, "")
-    table.insert(lines, "*Type your message in the input box below and press Enter to send.*")
-
-    return lines
-end
-
-M.add_separator = function()
-    return "---"
 end
 
 

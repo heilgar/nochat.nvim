@@ -68,15 +68,29 @@ M.set_provider = function(session_id, provider)
         return false
     end
 
-    -- Check if provider is valid
     local nochat = require("nochat")
     if not nochat.config.providers[provider] then
         vim.notify("Invalid provider: " .. provider, vim.log.levels.ERROR)
         return false
     end
 
-    -- Update provider
+    local provider_models = nochat.config.providers[provider].models
+
+    -- Check if current model exists in the new provider
+    local model_is_compatible = false
+    for _, m in ipairs(provider_models) do
+        if m == session.model then
+            model_is_compatible = true
+            break
+        end
+    end
+
     session.provider = provider
+
+    if not model_is_compatible then
+        session.model = provider_models[1] or "" -- Default to first model or empty string
+        vim.notify("Changed model to " .. session.model .. " for compatibility", vim.log.levels.INFO)
+    end
 
     -- Update title if window is open
     if session.window_state.is_open then
@@ -94,21 +108,26 @@ M.set_model = function(session_id, model)
         return false
     end
 
-    -- Check if model is valid for the session's provider
-    local nochat = require("nochat")
-    local provider = session.provider
-    local models = nochat.config.providers[provider].models
+    local nochat = require('nochat')
+    local providers = require('nochat.providers')
+    local provider = providers.loaded[session.provider]
 
     local is_valid = false
-    for _, m in ipairs(models) do
+    local provider_models = nochat.config.providers[session.provider].models or {}
+
+    for _, m in ipairs(provider_models) do
         if m == model then
             is_valid = true
             break
         end
     end
 
+    if not is_valid and provider and provider.is_valid_model then
+        is_valid = provider:is_valid_model(model)
+    end
+
     if not is_valid then
-        vim.notify("Invalid model for " .. provider .. ": " .. model, vim.log.levels.ERROR)
+        vim.notify("Invalid model: " .. model .. " for provider " .. session.provider, vim.log.levels.ERROR)
         return false
     end
 
@@ -117,7 +136,7 @@ M.set_model = function(session_id, model)
 
     -- Update title if window is open
     if session.window_state.is_open then
-        local window = require("nochat.window")
+        local window = require('nochat.window')
         window.update_title(session)
     end
 
