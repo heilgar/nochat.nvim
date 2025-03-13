@@ -1,6 +1,14 @@
 # NoChat.nvim
 
-NoChat is a Neovim plugin that enables chat abilities with various AI providers directly in your editor. Seamlessly interact with Claude, ChatGPT, or local Ollama models without leaving your workflow.
+## Motivation
+
+As a developer, I wanted a seamless AI interaction experience directly within Neovim that:
+- Provides instant context-aware assistance near the cursor
+- Supports multiple AI providers and models effortlessly
+- Integrates smoothly with my existing workflow
+- Allows flexible configuration and quick access to AI capabilities
+
+NoChat.nvim emerged from the desire to have a powerful, customizable AI chat interface that feels native to Neovim, enabling developers to get assistance, generate code, and explore ideas without leaving their editor.
 
 ## Features
 
@@ -13,6 +21,8 @@ NoChat is a Neovim plugin that enables chat abilities with various AI providers 
 - 📋 Export selected text to chat
 - 📢 Configurable window positioning (floating, split, tab)
 - 🤩 Simple API for adding additional providers
+- 🎯 Cursor-aware interactions
+- 🔄 Multi-model chat capabilities
 
 ## Installation
 
@@ -23,6 +33,7 @@ NoChat is a Neovim plugin that enables chat abilities with various AI providers 
     "heilgar/nochat.nvim",
     dependencies = {
         "nvim-telescope/telescope.nvim",
+        "nvim-lua/plenary.nvim"
     },
     config = function()
         require("nochat").setup({
@@ -39,6 +50,7 @@ use {
     "heilgar/nochat.nvim",
     requires = {
         "nvim-telescope/telescope.nvim",
+        "nvim-lua/plenary.nvim"
     },
     config = function()
         require("nochat").setup({
@@ -47,6 +59,12 @@ use {
     end
 }
 ```
+
+## Prerequisites
+
+- Neovim 0.8+
+- [Telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
+- [plenary.nvim](https://github.com/nvim-lua/plenary.nvim)
 
 ## Configuration
 
@@ -195,7 +213,7 @@ NoChat comes with the following default keymaps:
 #### Global Keymaps
 
 - `<leader>nc` - Toggle chat window
-- `<leader>nd` - Celar current conversation
+- `<leader>nd` - Clear current conversation
 - `<leader>np` - Select provider
 - `<leader>nm` - Select model
 - `<leader>ne` - Export selected text to chat (in visual mode)
@@ -226,7 +244,25 @@ You can also access NoChat features from Telescope:
 :Telescope nochat model
 ```
 
+## Roadmap and Future Improvements
+
+- [ ] Enhanced cursor-aware context extraction
+- [ ] Support for more AI providers
+- [ ] Improved code generation and refactoring capabilities
+- [ ] Advanced model selection and comparison
+- [ ] Local model caching and performance optimizations
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
 ## License
 
-MIT
+MIT License
+
+## Acknowledgments
+
+- [Neovim](https://neovim.io/)
+- [Telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
+- AI Providers (Anthropic, OpenAI, Ollama)
 
