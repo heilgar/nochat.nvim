@@ -10,6 +10,8 @@ NoChat is a Neovim plugin that enables chat abilities with various AI providers 
   - Ollama (local models)
 - 🔍 Easy provider and model selection via Telescope
 - 💬 Interactive chat interface within Neovim
+- 📋 Export selected text to chat
+- 📢 Configurable window positioning (floating, split, tab)
 - 🤩 Simple API for adding additional providers
 
 ## Installation
@@ -58,10 +60,16 @@ require("nochat").setup({
 
     -- Window appearance
     window = {
+        position = "floating", -- "floating", "right", "left", "bottom", "top", "tab"
         width = 0.8,     -- Percentage of screen width
         height = 0.7,    -- Percentage of screen height
         border = "rounded",
         title = " NoChat ",
+        input_height = 5, -- Height of input box in lines
+        winhighlight = {
+            output = "", -- e.g. "Normal:NoChatOutput"
+            input = ""   -- e.g. "Normal:NoChatInput"
+        }
     },
 
     -- API keys (can also be set as environment variables)
@@ -106,11 +114,44 @@ require("nochat").setup({
         toggle = "<leader>nc",
         select_provider = "<leader>np",
         select_model = "<leader>nm",
+        clear_conversation = "<leader>nc",
+        export_selection = "<leader>ne",
+        position_floating = "<leader>nf",
+        position_right = "<leader>nr",
+        position_left = "<leader>nl",
+        position_bottom = "<leader>nb",
+        position_top = "<leader>nt",
+        position_tab = "<leader>nn",
     },
 
     -- Set to true to disable default keymaps
     no_default_keymaps = false,
 })
+```
+
+## Window Configuration
+
+NoChat provides a highly customizable chat interface that can be positioned in various ways within Neovim:
+
+### Window Position Options
+
+You can configure NoChat's window position in your setup with the `window.position` option. Each position mode offers different advantages:
+
+- **floating**: A centered popup window that floats above your content (default)
+- **right/left**: Vertical split on the right or left side
+- **top/bottom**: Horizontal split at the top or bottom
+- **tab**: Opens in a new tab
+
+### Changing Position Dynamically
+
+You can also change the window position at runtime:
+
+```lua
+-- Change to a left split
+:lua require('nochat').set_window_position('left')
+
+-- Change to floating mode
+:lua require('nochat').set_window_position('floating')
 ```
 
 ## Global Variables
@@ -144,14 +185,35 @@ NoChat provides the following commands:
 - `:NoChatClose` - Close the chat window
 - `:NoChatSelectProvider` - Open Telescope to select a provider
 - `:NoChatSelectModel` - Open Telescope to select a model for the current provider
+- `:NoChatClearConversation` - Clear the current conversation history
+- `:NoChatPosition <position>` - Change the window position (with tab completion)
 
 ### Default Keymaps
 
 NoChat comes with the following default keymaps:
 
+#### Global Keymaps
+
 - `<leader>nc` - Toggle chat window
+- `<leader>nd` - Celar current conversation
 - `<leader>np` - Select provider
 - `<leader>nm` - Select model
+- `<leader>ne` - Export selected text to chat (in visual mode)
+
+#### Window Position Keymaps
+
+- `<leader>nf` - Set window to floating layout
+- `<leader>nr` - Set window to right split
+- `<leader>nl` - Set window to left split
+- `<leader>nb` - Set window to bottom split
+- `<leader>nt` - Set window to top split
+- `<leader>nn` - Set window to tab layout
+
+#### Chat Input Window Keymaps
+
+- `<CR>` (normal mode) - Send message
+- `<C-CR>` (insert mode) - Send message
+- `<M-CR>` (Alt+Enter, insert mode) - Insert newline without sending
 
 You can disable default keymaps by setting `no_default_keymaps = true` in your configuration or `let g:nochat_no_default_mappings = 1` in your Vim config.
 
